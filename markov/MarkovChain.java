@@ -11,8 +11,8 @@ public class MarkovChain {
 		// The HashTable that store the prefixes and suffixes
 		private static Map<String, ArrayList<String>> statetab;
 		
-		// HashTable that stores prefixes and the number of times they appear
-		private static ArrayList<String> prefix_list;
+		// List that stores strings that appear right before a stop
+		private static Map<String, ArrayList<String>> eol_suffix;
 		
 		// Random Number generator
 		private static Random rand;
@@ -20,7 +20,7 @@ public class MarkovChain {
 		public static void init(int pref_len, ArrayList<String> sentences) {
 			prefix_len = pref_len;
 			statetab = new HashMap<String, ArrayList<String>>();
-			prefix_list = new ArrayList<String>();
+			eol_suffix = new HashMap<String, ArrayList<String>>();
 			rand = new Random();
 			
 			build(sentences);			
@@ -31,6 +31,16 @@ public class MarkovChain {
 				String[] words = sentence.split(" ");
 				int len = words.length;
 				
+				if (len < prefix_len)
+					continue;
+				
+				// Set the first prefix to be the empty string's suffix
+				String suffix = "";
+				for (int i = 0; i < prefix_len; i++) {
+					suffix += (i < prefix_len - 1) ? words[i] + " " : words[i];
+				}
+				add("", suffix);
+				
 				// Sentence shorter than the suffix length will not be used
 				for (int i = 0; i < len - prefix_len; i++) {
 					String prefix = "";
@@ -40,15 +50,23 @@ public class MarkovChain {
 					// Add suffix to state table
 					add(prefix, words[i + prefix_len]);
 					
-					// Append to prefix list
-					prefix_list.add(prefix);
+					// Append to eol suffix list if it's the last word
+					if ((i + prefix_len) == (len - 1)) {
+						String last_word = prefix.split(" ")[prefix_len - 1];
+						ArrayList<String> suf_lst = (eol_suffix.containsKey(last_word)) ? 
+								eol_suffix.get(last_word) : new ArrayList<String>();
+						
+						suf_lst.add(words[i + prefix_len]);
+						eol_suffix.put(last_word, suf_lst);
+					}
 				}
 			}
 		}
 		
 		public static ArrayList<String> nextSentence(int length) {
-			// Randomly pick prefix from list
-			String prefix = prefix_list.get(rand.nextInt(prefix_list.size()));
+			// Randomly pick prefix from list of empty string suffixes
+			ArrayList<String> prefs = statetab.get("");
+			String prefix = prefs.get(rand.nextInt(prefs.size()));
 			
 			ArrayList<String> sentence = new ArrayList<String>();
 			String[] words = prefix.split(" ");
@@ -59,18 +77,14 @@ public class MarkovChain {
 			String last_word = words[words.length - 1];
 
 			for (int i = words.length - 1; i < length; i++) {
-				ArrayList<String> suffixes = statetab.get(prefix);
-				
-				if (suffixes != null) {
+				ArrayList<String> suffixes = ((i == length - 1) && (eol_suffix.containsKey(words[words.length - 2]))) ? 
+						eol_suffix.get(words[words.length - 2]) : statetab.get(prefix);
+						
+				if (suffixes != null)
 					last_word = suffixes.get(rand.nextInt(suffixes.size()));
-					
-				} else {
-					// Pick a word based on a one-word prefix
-					suffixes = statetab.get(last_word);
-					last_word = (suffixes != null) ? 
-						suffixes.get(rand.nextInt(suffixes.size())) :
-							Style.randomWord();
-				}
+				else
+					break;
+				
 				sentence.add(last_word);
 				
 				// Update prefix
@@ -91,7 +105,6 @@ public class MarkovChain {
 
 		private static void add(String prefix, String suffix) {
 			ArrayList<String> pref_lst = new ArrayList<String>();
-			ArrayList<String> word_lst = new ArrayList<String>();
 			
 			// N-word prefix where N > 1 
 			if (statetab.containsKey(prefix))
@@ -100,20 +113,6 @@ public class MarkovChain {
 			// Add N-word prefix
 			pref_lst.add(suffix);
 			statetab.put(prefix, pref_lst);
-			
-			// 1 word prefix as fall back
-			if (prefix_len > 1) {
-				String[] words = prefix.split(" ");
-				String word = words[prefix_len - 1];
-				if (!word.equals(" ")) {
-					if (statetab.containsKey(word))
-						word_lst = statetab.get(prefix);
-						
-					// Add 1 word prefix
-					word_lst.add(suffix);
-					statetab.put(word, word_lst);
-				}
-			}
 		}
 
 }

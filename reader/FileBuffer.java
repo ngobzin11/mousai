@@ -7,7 +7,7 @@ public class FileBuffer {
 
 	final static File folder = new File("./txt_files");
 
-	public static ArrayList<String> read() {
+	public static ArrayList<String> read(int max_files) {
 		ArrayList<String> sentences = new ArrayList<String>();
 
 		ArrayList<String> prev_lines = new ArrayList<String>();
@@ -75,6 +75,8 @@ public class FileBuffer {
 					e.printStackTrace();
 				}
 			}
+			if (max_files-- == 0)
+				break;
 		}
 		return sentences;
 	}

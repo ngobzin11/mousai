@@ -10,11 +10,12 @@ import java.util.*;
 public class Main {
 
 	private static final int pop_size = 300;
+	static Random rand = new Random();
 
 	public static void main(String[] args) {
 
 		System.err.println("Reading Books...");
-		ArrayList<String> sentences = FileBuffer.read();
+		ArrayList<String> sentences = FileBuffer.read(20);
 		
 		System.err.println("\nGenerating Sentence Style...\n");
 		Style.generate(sentences);
@@ -45,7 +46,6 @@ public class Main {
 			if (max == 0)
 				break;
 		}
-
 	}
 
 }
